@@ -23,17 +23,17 @@ type HandlerMetadata struct {
 }
 
 type Settings struct {
-	Port        string              `cfg:"port" default:"8080"`
-	Mode        string              `cfg:"mode" default:"release" validate:"oneof=release debug test"`
 	Compression CompressionSettings `cfg:"compression"`
+	Mode        string              `cfg:"mode" default:"release" validate:"oneof=release debug test"`
+	Port        string              `cfg:"port" default:"8080"`
 	Timeout     TimeoutSettings     `cfg:"timeout"`
 }
 
 type TimeoutSettings struct {
+	Idle time.Duration `cfg:"idle" default:"60s" validate:"min=1000000000"`
 	// read, write and idle timeouts. You need to give at least 1s as timeout.
 	Read  time.Duration `cfg:"read" default:"60s" validate:"min=1000000000"`
 	Write time.Duration `cfg:"write" default:"60s" validate:"min=1000000000"`
-	Idle  time.Duration `cfg:"idle" default:"60s" validate:"min=1000000000"`
 }
 
 type ApiServer struct {
@@ -41,13 +41,13 @@ type ApiServer struct {
 	kernel.ServiceStage
 
 	logger   log.Logger
-	server   *http.Server
 	listener net.Listener
+	server   *http.Server
 }
 
 func New(definer Definer) kernel.ModuleFactory {
 	return func(ctx context.Context, config cfg.Config, logger log.Logger) (kernel.Module, error) {
-		if config.IsSet("api_port") || config.IsSet("api_mode") || config.IsSet("api_timeout_read") || config.IsSet("api_timeout_write") || config.IsSet("api_timeout_idle") {
+		if config.IsSetInConfig("api_port") || config.IsSet("api_mode") || config.IsSet("api_timeout_read") || config.IsSet("api_timeout_write") || config.IsSet("api_timeout_idle") {
 			return nil, fmt.Errorf("old config format detected. You have to change your config from api_port to api.port, api_mode to api.mode, and so on")
 		}
 
