@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/justtrackio/gosoline/pkg/test/assert"
 	"github.com/justtrackio/gosoline/pkg/test/env"
-	"github.com/stretchr/testify/assert"
 )
 
 func init() {
