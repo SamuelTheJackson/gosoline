@@ -37,7 +37,7 @@ func (b *namedFixtureBuilder) Fixtures() []*fixtures.FixtureSet {
 	b.fixtures = fixtures.NamedFixtureSet{
 		{
 			Name:  "test",
-			Value: &DynamoDbExampleModel{Name: "Some Name", Value: "Some Value"},
+			Value: &DynamoDbExampleModel{Name: "Some QueueName", Value: "Some Value"},
 		},
 	}
 

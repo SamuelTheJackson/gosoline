@@ -50,7 +50,7 @@ func (s *DynamoDbSuite) TestDynamoDb() {
 
 	gio, err := ddbClient.GetItem(context.Background(), &dynamodb.GetItemInput{
 		Key: map[string]types.AttributeValue{
-			"Name": &types.AttributeValueMemberS{
+			"QueueName": &types.AttributeValueMemberS{
 				Value: "Ash",
 			},
 		},
@@ -60,7 +60,7 @@ func (s *DynamoDbSuite) TestDynamoDb() {
 	// should have created the item
 	s.NoError(err)
 	s.Len(gio.Item, 2, "2 attributes expected")
-	s.Equal("Ash", gio.Item["Name"].(*types.AttributeValueMemberS).Value)
+	s.Equal("Ash", gio.Item["QueueName"].(*types.AttributeValueMemberS).Value)
 	s.Equal("10", gio.Item["Age"].(*types.AttributeValueMemberN).Value)
 
 	qo, err := ddbClient.Query(context.Background(), &dynamodb.QueryInput{
@@ -96,7 +96,7 @@ func (s *DynamoDbSuite) TestDynamoDbWithPurge() {
 
 	gio, err := ddbClient.GetItem(context.Background(), &dynamodb.GetItemInput{
 		Key: map[string]types.AttributeValue{
-			"Name": &types.AttributeValueMemberS{
+			"QueueName": &types.AttributeValueMemberS{
 				Value: "Ash",
 			},
 		},
@@ -106,7 +106,7 @@ func (s *DynamoDbSuite) TestDynamoDbWithPurge() {
 	// should have created the first item
 	s.NoError(err)
 	s.Len(gio.Item, 2, "2 attributes expected")
-	s.Equal("Ash", gio.Item["Name"].(*types.AttributeValueMemberS).Value)
+	s.Equal("Ash", gio.Item["QueueName"].(*types.AttributeValueMemberS).Value)
 	s.Equal("10", gio.Item["Age"].(*types.AttributeValueMemberN).Value)
 
 	err = loader.Load(envContext, s.dynamoDbEnabledPurgeFixtures())
@@ -114,7 +114,7 @@ func (s *DynamoDbSuite) TestDynamoDbWithPurge() {
 
 	gio, err = ddbClient.GetItem(context.Background(), &dynamodb.GetItemInput{
 		Key: map[string]types.AttributeValue{
-			"Name": &types.AttributeValueMemberS{
+			"QueueName": &types.AttributeValueMemberS{
 				Value: "Bash",
 			},
 		},
@@ -124,12 +124,12 @@ func (s *DynamoDbSuite) TestDynamoDbWithPurge() {
 	// should have created the second item
 	s.NoError(err)
 	s.Len(gio.Item, 2, "2 attributes expected")
-	s.Equal("Bash", gio.Item["Name"].(*types.AttributeValueMemberS).Value)
+	s.Equal("Bash", gio.Item["QueueName"].(*types.AttributeValueMemberS).Value)
 	s.Equal("10", gio.Item["Age"].(*types.AttributeValueMemberN).Value)
 
 	gio, err = ddbClient.GetItem(context.Background(), &dynamodb.GetItemInput{
 		Key: map[string]types.AttributeValue{
-			"Name": &types.AttributeValueMemberS{
+			"QueueName": &types.AttributeValueMemberS{
 				Value: "Ash",
 			},
 		},
@@ -189,7 +189,7 @@ func (s *DynamoDbSuite) TestDynamoDbKvStore() {
 	s.Equal(expectedKey, gio.Item["key"].(*types.AttributeValueMemberS))
 
 	expectedValue := &types.AttributeValueMemberS{
-		Value: `{"Name":"Ash","Age":10}`,
+		Value: `{"QueueName":"Ash","Age":10}`,
 	}
 	s.Equal(expectedValue, gio.Item["value"].(*types.AttributeValueMemberS))
 
@@ -223,7 +223,7 @@ func (s *DynamoDbSuite) TestDynamoDbKvStoreWithPurge() {
 	s.Len(gio.Item, 2, "2 attributes expected")
 
 	expectedValue := &types.AttributeValueMemberS{
-		Value: `{"Name":"Ash","Age":10}`,
+		Value: `{"QueueName":"Ash","Age":10}`,
 	}
 	s.Equal(expectedValue, gio.Item["value"].(*types.AttributeValueMemberS))
 
@@ -249,7 +249,7 @@ func (s *DynamoDbSuite) TestDynamoDbKvStoreWithPurge() {
 	s.Equal(expectedKey, gio.Item["key"].(*types.AttributeValueMemberS))
 
 	expectedValue = &types.AttributeValueMemberS{
-		Value: `{"Name":"Bash","Age":10}`,
+		Value: `{"QueueName":"Bash","Age":10}`,
 	}
 	s.Equal(expectedValue, gio.Item["value"].(*types.AttributeValueMemberS))
 

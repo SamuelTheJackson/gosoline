@@ -9,6 +9,7 @@ import (
 	"github.com/justtrackio/gosoline/pkg/cloud/aws/kinesis"
 	"github.com/justtrackio/gosoline/pkg/cloud/aws/sqs"
 	"github.com/justtrackio/gosoline/pkg/log"
+	"github.com/justtrackio/gosoline/pkg/rabbitmq"
 )
 
 const (
@@ -19,6 +20,7 @@ const (
 	InputTypeSns      = "sns"
 	InputTypeSqs      = "sqs"
 	InputTypeKafka    = "kafka"
+	InputTypeRabbitmq = "rabbitmq"
 )
 
 type InputFactory func(ctx context.Context, config cfg.Config, logger log.Logger, name string) (Input, error)
@@ -31,6 +33,7 @@ var inputFactories = map[string]InputFactory{
 	InputTypeSns:      newSnsInputFromConfig,
 	InputTypeSqs:      newSqsInputFromConfig,
 	InputTypeKafka:    newKafkaInputFromConfig,
+	InputTypeRabbitmq: newRabbitmqInputFromConfig,
 }
 
 func SetInputFactory(typ string, factory InputFactory) {
@@ -279,4 +282,44 @@ func readAllInputTypes(config cfg.Config) map[string]string {
 	}
 
 	return inputsTypes
+}
+
+func newRabbitmqInputFromConfig(ctx context.Context, config cfg.Config, logger log.Logger, name string) (Input, error) {
+	settings := readRabbitmqInputSettings(config, name)
+
+	return NewRabbitmqInput(ctx, config, logger, settings)
+}
+
+type rabbitmqInputConfiguration struct {
+	Family            string                    `cfg:"target_family"`
+	Application       string                    `cfg:"target_application"`
+	ExchangeId        string                    `cfg:"target_exchange_id" validate:"min=1"`
+	VisibilityTimeout int                       `cfg:"visibility_timeout" default:"30" validate:"min=1"`
+	RunnerCount       int                       `cfg:"runner_count" default:"1" validate:"min=1"`
+	ClientName        string                    `cfg:"client_name" default:"default"`
+	Unmarshaller      string                    `cfg:"unmarshaller" default:"msg"`
+	Exchange          rabbitmq.ExchangeSettings `cfg:"exchange"`
+}
+
+func readRabbitmqInputSettings(config cfg.Config, name string) *RabbitmqInputSettings {
+	key := ConfigurableInputKey(name)
+
+	configuration := rabbitmqInputConfiguration{}
+	config.UnmarshalKey(key, &configuration)
+
+	settings := &RabbitmqInputSettings{
+		AppId: cfg.AppId{
+			Family:      configuration.Family,
+			Application: configuration.Application,
+		},
+		ExchangeId:   configuration.ExchangeId,
+		Exchange:     configuration.Exchange,
+		RunnerCount:  configuration.RunnerCount,
+		ClientName:   configuration.ClientName,
+		Unmarshaller: configuration.Unmarshaller,
+	}
+
+	settings.PadFromConfig(config)
+
+	return settings
 }

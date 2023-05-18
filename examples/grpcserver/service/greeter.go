@@ -31,7 +31,7 @@ func NewGreeterService(_ cfg.Config, logger log.Logger) *greeter {
 	return s
 }
 
-// SayHello returns the message "Hello {protobuf.HelloRequest.Name}" if the running is true, otherwise returns error.
+// SayHello returns the message "Hello {protobuf.HelloRequest.QueueName}" if the running is true, otherwise returns error.
 func (h *greeter) SayHello(ctx context.Context, request *grpcServerTestProto.HelloRequest) (*grpcServerTestProto.HelloReply, error) {
 	h.requestCount++
 

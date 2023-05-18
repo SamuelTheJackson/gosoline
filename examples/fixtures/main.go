@@ -75,7 +75,7 @@ var fixtureSets = []*fixtures.FixtureSet{
 		Fixtures: []interface{}{
 			&fixtures.KvStoreFixture{
 				Key:   "SomeKey",
-				Value: DynamoDbExampleModel{Name: "Some Name", Value: "Some Value"},
+				Value: DynamoDbExampleModel{Name: "Some QueueName", Value: "Some Value"},
 			},
 		},
 	},
@@ -114,7 +114,7 @@ var fixtureSets = []*fixtures.FixtureSet{
 			},
 		}),
 		Fixtures: []interface{}{
-			&DynamoDbExampleModel{Name: "Some Name", Value: "Some Value"},
+			&DynamoDbExampleModel{Name: "Some QueueName", Value: "Some Value"},
 		},
 	},
 	{

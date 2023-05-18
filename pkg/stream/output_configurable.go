@@ -19,6 +19,7 @@ const (
 	OutputTypeSns      = "sns"
 	OutputTypeSqs      = "sqs"
 	OutputTypeKafka    = "kafka"
+	OutputTypeRabbitmq = "rabbitmq"
 )
 
 type BaseOutputConfigurationAware interface {

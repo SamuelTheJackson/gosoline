@@ -5,8 +5,10 @@ import (
 )
 
 const (
-	AttributeSqsMessageId     = "sqsMessageId"
-	AttributeSqsReceiptHandle = "sqsReceiptHandle"
+	AttributeSqsMessageId        = "sqsMessageId"
+	AttributeSqsReceiptHandle    = "sqsReceiptHandle"
+	AttributeRabbitmqDeliveryTag = "rabbitMqDeliveryTag"
+	AttributeRabbitmqMessageId   = "rabbitmqMessageId"
 )
 
 type Message struct {
