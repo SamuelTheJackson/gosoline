@@ -15,9 +15,8 @@ import (
 
 type RabbitmqTestSuite struct {
 	suite.Suite
-	client rabbitmq.Client
-	clock  clock.FakeClock
-	queue  rabbitmq.Queue
+	clock clock.FakeClock
+	queue rabbitmq.Queue
 }
 
 func (s *RabbitmqTestSuite) SetupSuite() []suite.Option {
@@ -31,23 +30,19 @@ func (s *RabbitmqTestSuite) SetupSuite() []suite.Option {
 }
 
 func (s *RabbitmqTestSuite) SetupTest() error {
-	var err error
-
-	s.client, err = rabbitmq.NewClient(s.Env().Context(), s.Env().Config(), s.Env().Logger(), "test")
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
 func (s *RabbitmqTestSuite) TestPublishAndConsumeMessage() {
 	ctx := context.Background()
 
-	err := s.client.Ping(ctx)
+	client, err := rabbitmq.NewClient(s.Env().Context(), s.Env().Config(), s.Env().Logger(), "test")
+	s.NoError(err, "could not create client")
+
+	err = client.Ping(ctx)
 	s.NoError(err)
 
-	_, err = s.client.CreateQueue(ctx, rabbitmq.CreateQueueInput{
+	_, err = client.CreateQueue(ctx, rabbitmq.CreateQueueInput{
 		QueueName: "test",
 		Attributes: map[string]any{
 			"x-max-length":            10000,
@@ -56,7 +51,7 @@ func (s *RabbitmqTestSuite) TestPublishAndConsumeMessage() {
 	})
 	s.NoError(err)
 
-	err = s.client.CreateExchange(ctx, rabbitmq.CreateExchangeInput{
+	err = client.CreateExchange(ctx, rabbitmq.CreateExchangeInput{
 		Attributes: map[string]any{
 			"x-max-length":            10000,
 			"x-message-deduplication": true,
@@ -66,21 +61,21 @@ func (s *RabbitmqTestSuite) TestPublishAndConsumeMessage() {
 	})
 	s.NoError(err)
 
-	err = s.client.BindQueue(ctx, rabbitmq.QueueBindInput{
+	err = client.BindQueue(ctx, rabbitmq.QueueBindInput{
 		ExchangeName: "test",
 		QueueName:    "test",
 	})
 	s.NoError(err)
 
 	for i := 0; i < 100; i++ {
-		_, err = s.client.SendMessage(ctx, rabbitmq.SendMessageInput{
+		_, err = client.SendMessage(ctx, rabbitmq.SendMessageInput{
 			ExchangeName: "test",
 			Body:         []byte("hallo"),
 		})
 		s.NoError(err)
 	}
 
-	out, err := s.client.ReceiveMessage(ctx, rabbitmq.ReceiveMessageInput{
+	out, err := client.ReceiveMessage(ctx, rabbitmq.ReceiveMessageInput{
 		QueueName: "test",
 	})
 	s.NoError(err)

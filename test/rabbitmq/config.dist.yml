@@ -18,3 +18,10 @@ rabbitmq:
     timeout: 20
     retry_count: 4
 
+
+stream:
+  output:
+    rabbit:
+      type: rabbitmq
+  producer:
+    rabbit:
