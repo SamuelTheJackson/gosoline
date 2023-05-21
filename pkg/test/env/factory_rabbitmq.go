@@ -2,6 +2,7 @@ package env
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/justtrackio/gosoline/pkg/cfg"
 	"github.com/justtrackio/gosoline/pkg/log"
@@ -17,7 +18,8 @@ const componentRabbitmq = "rabbitmq"
 type rabbitmqSettings struct {
 	ComponentBaseSettings
 	ComponentContainerSettings
-	Port int `cfg:"port" default:"5672"`
+	ContainerBindingSettings
+	UseExternalContainer bool `cfg:"use_external_container" default:"false"`
 }
 
 type rabbitmqFactory struct {
@@ -64,7 +66,20 @@ func (f *rabbitmqFactory) DescribeContainers(settings interface{}) componentCont
 }
 
 func (f *rabbitmqFactory) configureContainer(settings interface{}) *containerConfig {
+
 	s := settings.(*rabbitmqSettings)
+
+	if s.UseExternalContainer {
+		return &containerConfig{
+			ContainerBindings: containerBindings{
+				"5672/tcp": containerBinding{
+					host: s.Host,
+					port: strconv.Itoa(s.Port),
+				},
+			},
+			UseExternalContainer: s.UseExternalContainer,
+		}
+	}
 
 	return &containerConfig{
 		Repository: "rabbitmq",
@@ -72,9 +87,9 @@ func (f *rabbitmqFactory) configureContainer(settings interface{}) *containerCon
 		PortBindings: portBindings{
 			"5672/tcp": s.Port,
 		},
-		ExpireAfter:          s.ExpireAfter,
-		UseExternalContainer: true,
+		ExpireAfter: s.ExpireAfter,
 	}
+
 }
 
 func (f *rabbitmqFactory) healthCheck() ComponentHealthCheck {
@@ -96,9 +111,17 @@ func (f *rabbitmqFactory) healthCheck() ComponentHealthCheck {
 	}
 }
 
-func (f *rabbitmqFactory) Component(_ cfg.Config, _ log.Logger, containers map[string]*container, _ interface{}) (Component, error) {
-	component := &RabbitmqComponent{
-		address: f.address(containers["main"]),
+func (f *rabbitmqFactory) Component(_ cfg.Config, _ log.Logger, containers map[string]*container, settings interface{}) (Component, error) {
+	s := settings.(*rabbitmqSettings)
+	binding := containers["main"].bindings["5672/tcp"]
+	component := &rabbitmqComponent{
+		baseComponent: baseComponent{
+			name: s.Name,
+		},
+		binding: containerBinding{
+			host: binding.host,
+			port: binding.port,
+		},
 	}
 
 	return component, nil

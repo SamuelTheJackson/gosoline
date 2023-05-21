@@ -1,25 +1,24 @@
 package env
 
 import (
+	"fmt"
+
 	"github.com/justtrackio/gosoline/pkg/cfg"
 )
 
-type RabbitmqComponent struct {
+type rabbitmqComponent struct {
 	baseComponent
-	address string
+	binding containerBinding
 }
 
-func (c *RabbitmqComponent) CfgOptions() []cfg.Option {
+func (c *rabbitmqComponent) CfgOptions() []cfg.Option {
 	return []cfg.Option{
-		cfg.WithConfigSetting("rabbitmq", map[string]interface{}{
-			"default": map[string]interface{}{
-				"dialer":  "tcp",
-				"address": c.address,
+		cfg.WithConfigMap(map[string]interface{}{
+			"rabbitmq": map[string]interface{}{
+				c.name: map[string]interface{}{
+					"endpoint": fmt.Sprintf("amqp://%s:%s", c.binding.host, c.binding.port),
+				},
 			},
 		}),
 	}
-}
-
-func (c *RabbitmqComponent) Address() string {
-	return c.address
 }

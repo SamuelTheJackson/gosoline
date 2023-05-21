@@ -7,13 +7,10 @@ import (
 	"github.com/justtrackio/gosoline/pkg/cfg"
 )
 
-const FifoSuffix = "fifo"
-
 type NameSettingAware interface {
 	GetAppId() cfg.AppId
 	GetClientName() string
 	GetQueueId() string
-	IsFifoEnabled() bool
 	GetExchangeId() string
 }
 
@@ -46,11 +43,11 @@ func (s QueueNameSettings) GetExchangeId() string {
 }
 
 type QueueNameSetting struct {
-	Patter string `cfg:"pattern,nodecode" default:"{project}-{env}-{family}-{app}-{queueId}"`
+	Pattern string `cfg:"queue-pattern,nodecode" default:"{project}-{env}-{family}-{app}-{queueId}"`
 }
 
 type ExchangeNameSetting struct {
-	Patter string `cfg:"pattern,nodecode" default:"{project}-{env}-{family}-{app}-{exchangeId}"`
+	Pattern string `cfg:"exchange-pattern,nodecode" default:"{project}-{env}-{family}-{app}-{exchangeId}"`
 }
 
 func GetQueueSettings(config cfg.Config, queueSettings NameSettingAware) (*QueueSettings, error) {
@@ -58,11 +55,11 @@ func GetQueueSettings(config cfg.Config, queueSettings NameSettingAware) (*Queue
 		return nil, fmt.Errorf("the client name shouldn't be empty")
 	}
 
-	namingKey := fmt.Sprintf("rabbitmq.%s.naming", queueSettings.GetClientName())
+	namingKey := fmt.Sprintf("rabbitmq.%s", queueSettings.GetClientName())
 	namingSettings := &QueueNameSetting{}
 	config.UnmarshalKey(namingKey, namingSettings)
 
-	name := namingSettings.Patter
+	name := namingSettings.Pattern
 	appId := queueSettings.GetAppId()
 	values := map[string]string{
 		"project": appId.Project,
@@ -80,16 +77,16 @@ func GetQueueSettings(config cfg.Config, queueSettings NameSettingAware) (*Queue
 	return &QueueSettings{Name: name}, nil
 }
 
-func GetExchangeName(config cfg.Config, exchangeSetting NameSettingAware) (*ExchangeSettings, error) {
+func GetExchangeSettings(config cfg.Config, exchangeSetting NameSettingAware) (*ExchangeSettings, error) {
 	if len(exchangeSetting.GetClientName()) == 0 {
 		return nil, fmt.Errorf("the client name shouldn't be empty")
 	}
 
-	namingKey := fmt.Sprintf("rabbitmq.exchange.%s.naming", exchangeSetting.GetClientName())
+	namingKey := fmt.Sprintf("rabbitmq.%s", exchangeSetting.GetClientName())
 	namingSettings := &ExchangeNameSetting{}
 	config.UnmarshalKey(namingKey, namingSettings)
 
-	name := namingSettings.Patter
+	name := namingSettings.Pattern
 	appId := exchangeSetting.GetAppId()
 	values := map[string]string{
 		"project":    appId.Project,
@@ -106,6 +103,5 @@ func GetExchangeName(config cfg.Config, exchangeSetting NameSettingAware) (*Exch
 
 	return &ExchangeSettings{
 		Name: name,
-		Type: "",
 	}, nil
 }

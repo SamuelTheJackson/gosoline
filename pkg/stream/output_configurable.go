@@ -49,6 +49,7 @@ func NewConfigurableOutput(ctx context.Context, config cfg.Config, logger log.Lo
 		OutputTypeSns:      newSnsOutputFromConfig,
 		OutputTypeSqs:      newSqsOutputFromConfig,
 		OutputTypeKafka:    newKafkaOutputFromConfig,
+		OutputTypeRabbitmq: newRabbitmqOutputFromConfig,
 	}
 
 	key := fmt.Sprintf("%s.type", ConfigurableOutputKey(name))
@@ -204,6 +205,40 @@ func newSqsOutputFromConfig(ctx context.Context, config cfg.Config, logger log.L
 		RedrivePolicy:     configuration.RedrivePolicy,
 		Fifo:              configuration.Fifo,
 		ClientName:        configuration.ClientName,
+	})
+}
+
+type RabbitmqOutputConfiguration struct {
+	BaseOutputConfiguration
+	Type                 string   `cfg:"type" default:"rabbitmq"`
+	Project              string   `cfg:"project"`
+	Family               string   `cfg:"family"`
+	Application          string   `cfg:"application"`
+	QueueId              string   `cfg:"queue_id" validate:"required"`
+	ExchangeId           string   `cfg:"exchange_id" validate:"required"`
+	VisibilityTimeout    int      `cfg:"visibility_timeout" default:"30" validate:"gt=0"`
+	ClientName           string   `cfg:"client_name" default:"default"`
+	MessageDeduplication bool     `cfg:"message_deduplication" default:"true"`
+	RoutingKeys          []string `cfg:"routing_keys"`
+}
+
+func newRabbitmqOutputFromConfig(ctx context.Context, config cfg.Config, logger log.Logger, name string) (Output, error) {
+	key := ConfigurableOutputKey(name)
+	configuration := RabbitmqOutputConfiguration{}
+	config.UnmarshalKey(key, &configuration)
+
+	return NewRabbitmqOutput(ctx, config, logger, &RabbitmqOutputSettings{
+		AppId: cfg.AppId{
+			Project:     configuration.Project,
+			Family:      configuration.Family,
+			Application: configuration.Application,
+		},
+		ClientName:           configuration.ClientName,
+		ExchangeId:           configuration.ExchangeId,
+		QueueId:              configuration.QueueId,
+		RoutingKeys:          configuration.RoutingKeys,
+		VisibilityTimeout:    configuration.VisibilityTimeout,
+		MessageDeduplication: configuration.MessageDeduplication,
 	})
 }
 

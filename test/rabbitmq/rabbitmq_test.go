@@ -97,11 +97,10 @@ func (s *RabbitmqTestSuite) TestPublishAndConsumeMessage() {
 
 	select {
 	case msg := <-out.DeliverChannel:
-		s.Fail("didn't expect a new message but go a message: %w", msg)
+		s.Fail("didn't expect a new message but got a message: %w", msg)
 	default:
 
 	}
-
 }
 
 func TestRabbitmq(t *testing.T) {

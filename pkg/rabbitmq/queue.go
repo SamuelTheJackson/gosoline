@@ -19,8 +19,7 @@ import (
 )
 
 const (
-	MetadataKeyQueues = "cloud.aws.sqs.queues"
-	sqsBatchSize      = 10
+	MetadataKeyQueues = "rabbitmq.queues"
 )
 
 //go:generate mockery --name Queue
@@ -36,19 +35,10 @@ type Queue interface {
 }
 
 type Message struct {
-	MessageDeduplicationId *string
-	Body                   *string
-	DeliveryTag            uint64
-}
-
-type FifoSettings struct {
-	Enabled                   bool `cfg:"enabled" default:"false"`
-	ContentBasedDeduplication bool `cfg:"content_based_deduplication" default:"false"`
-}
-
-type RedrivePolicy struct {
-	Enabled         bool `cfg:"enabled" default:"true"`
-	MaxReceiveCount int  `cfg:"max_receive_count" default:"3"`
+	DeduplicationId *string
+	MessageId       string
+	Body            *string
+	DeliveryTag     uint64
 }
 
 type Properties struct {
@@ -63,7 +53,7 @@ type Properties struct {
 }
 
 type ExchangeSettings struct {
-	Name string
+	Name string `cfg:"name"`
 	Type string `cfg:"type" default:"direct"`
 }
 
@@ -72,13 +62,12 @@ type QueueSettings struct {
 }
 
 type Settings struct {
-	ClientName        string
-	Exchange          ExchangeSettings
-	ExchangeId        string
-	Queue             QueueSettings
-	QueueId           string
-	RoutingKeys       []string
-	VisibilityTimeout int
+	ClientName           string
+	Exchange             ExchangeSettings
+	Queue                QueueSettings
+	RoutingKeys          []string
+	VisibilityTimeout    int
+	MessageDeduplication bool
 }
 
 type queue struct {
@@ -91,7 +80,7 @@ type queue struct {
 type metadataQueueKey string
 
 func ProvideQueue(ctx context.Context, config cfg.Config, logger log.Logger, settings *Settings, optFns ...ClientOption) (Queue, error) {
-	key := fmt.Sprintf("%s-%s", settings.ClientName, settings.QueueId)
+	key := fmt.Sprintf("%s-%s", settings.ClientName, settings.Queue.Name)
 
 	return appctx.Provide(ctx, metadataQueueKey(key), func() (Queue, error) {
 		return NewQueue(ctx, config, logger, settings, optFns...)
@@ -114,18 +103,18 @@ func NewQueue(ctx context.Context, config cfg.Config, logger log.Logger, setting
 
 	_, err = srv.CreateExchange(ctx, *settings)
 	if err != nil {
-		return nil, fmt.Errorf("could not create or get properties of exchange %s: %w", settings.ExchangeId, err)
+		return nil, fmt.Errorf("could not create or get properties of exchange %s: %w", settings.Exchange.Name, err)
 	}
 
 	if props, err = srv.CreateQueue(ctx, *settings); err != nil {
-		return nil, fmt.Errorf("could not create or get properties of queue %s: %w", settings.QueueId, err)
+		return nil, fmt.Errorf("could not create or get properties of queue %s: %w", settings.Exchange.Name, err)
 	}
 
 	if _, err := srv.CreateBinding(ctx, *settings); err != nil {
 		return nil, fmt.Errorf("could not create queue bindings: %w", err)
 	}
 
-	if err = appctx.MetadataAppend(ctx, MetadataKeyQueues, settings.QueueId); err != nil {
+	if err = appctx.MetadataAppend(ctx, MetadataKeyQueues, settings.Queue.Name); err != nil {
 		return nil, fmt.Errorf("can not access the appctx metadata: %w", err)
 	}
 
@@ -152,11 +141,11 @@ func (q *queue) Send(ctx context.Context, msg *Message) error {
 		ExchangeName:    q.properties.ExchangeName,
 		Expiration:      "",
 		Headers: map[string]any{
-			"x-deduplication-id": msg.MessageDeduplicationId,
+			"x-deduplication-id": msg.DeduplicationId,
 		},
 		Immediate: false,
 		Mandatory: false,
-		MessageId: *msg.MessageDeduplicationId,
+		MessageId: *msg.DeduplicationId,
 		Priority:  0,
 		QueueName: q.properties.QueueName,
 		ReplyTo:   "",
@@ -183,7 +172,7 @@ func (q *queue) SendBatch(ctx context.Context, messages []*Message) error {
 
 		entries[i] = types.SendMessageBatchRequestEntry{
 			Id:                     aws.String(id),
-			MessageDeduplicationId: messages[i].MessageDeduplicationId,
+			MessageDeduplicationId: messages[i].DeduplicationId,
 			MessageBody:            messages[i].Body,
 		}
 	}
@@ -229,10 +218,17 @@ func (q *queue) Receive(ctx context.Context) (<-chan Message, error) {
 	msgInput := make(chan Message, 10)
 	go func() {
 		for rawInput := range out.DeliverChannel {
+			var dedupId *string
+			if vI, ok := rawInput.Headers[AttributeDeduplication]; ok {
+				v := vI.(string)
+				dedupId = mdl.Box(v)
+			}
+
 			msg := Message{
-				MessageDeduplicationId: mdl.Box(rawInput.MessageId),
-				Body:                   mdl.Box(string(rawInput.Body)),
-				DeliveryTag:            rawInput.DeliveryTag,
+				DeduplicationId: dedupId,
+				MessageId:       rawInput.MessageId,
+				Body:            mdl.Box(string(rawInput.Body)),
+				DeliveryTag:     rawInput.DeliveryTag,
 			}
 			msgInput <- msg
 		}

@@ -56,8 +56,18 @@ func (s service) CreateQueue(ctx context.Context, settings Settings) (*Propertie
 	s.lck.Lock()
 	s.lck.Unlock()
 
+	attributes := make(map[string]any)
+
+	visibilityTimeout := DefaultVisibilityTimeout
+	if settings.VisibilityTimeout > 0 {
+		visibilityTimeout = settings.VisibilityTimeout
+	}
+
+	attributes["x-message-ttl"] = visibilityTimeout
+	attributes["x-message-deduplication"] = settings.MessageDeduplication
+
 	rabbitMqInput := CreateQueueInput{
-		Attributes: make(map[string]any),
+		Attributes: attributes,
 	}
 	exists, err := s.QueueExists(ctx, rabbitMqInput)
 	if err != nil {
@@ -65,20 +75,13 @@ func (s service) CreateQueue(ctx context.Context, settings Settings) (*Propertie
 	}
 
 	if exists {
-		return s.GetPropertiesByName(ctx, settings.QueueId)
+		return s.GetPropertiesByName(ctx, settings.Queue.Name)
 	}
 
 	if !exists && !s.settings.AutoCreate {
-		return nil, fmt.Errorf("sqs queue with name %s does not exist", settings.QueueId)
+		return nil, fmt.Errorf("sqs queue with name %s does not exist", settings.Queue.Name)
 	}
 	//TODO dead letter
-
-	visibilityTimeout := DefaultVisibilityTimeout
-	if settings.VisibilityTimeout > 0 {
-		visibilityTimeout = settings.VisibilityTimeout
-	}
-
-	rabbitMqInput.Attributes["x-message-ttl"] = visibilityTimeout
 
 	props, err := s.doCreateQueue(ctx, rabbitMqInput)
 	if err != nil {
@@ -97,11 +100,11 @@ func (s service) QueueExists(ctx context.Context, input CreateQueueInput) (bool,
 	}).Info("checking the existence of sqs queue")
 
 	return s.client.QueueExists(ctx, CreateQueueInput{
-		Attributes: nil,
-		AutoDelete: false,
-		Durable:    false,
-		Exclusive:  false,
-		NoWait:     false,
+		Attributes: input.Attributes,
+		AutoDelete: input.AutoDelete,
+		Durable:    input.Durable,
+		Exclusive:  input.Exclusive,
+		NoWait:     input.NoWait,
 		QueueName:  input.QueueName,
 	})
 
@@ -153,9 +156,13 @@ func (s service) CreateExchange(ctx context.Context, settings Settings) (*Proper
 	s.lck.Lock()
 	s.lck.Unlock()
 
+	attributes := make(map[string]any)
+	attributes["x-message-deduplication"] = settings.MessageDeduplication
+
 	rabbitMqInput := CreateExchangeInput{
+		Attributes:   attributes,
 		ExchangeType: settings.Exchange.Type,
-		Name:         settings.ExchangeId,
+		Name:         settings.Exchange.Name,
 	}
 	exists, err := s.ExchangeExists(ctx, rabbitMqInput)
 	if err != nil {
@@ -163,11 +170,11 @@ func (s service) CreateExchange(ctx context.Context, settings Settings) (*Proper
 	}
 
 	if exists {
-		return s.GetPropertiesByName(ctx, settings.ExchangeId)
+		return s.GetPropertiesByName(ctx, settings.Exchange.Name)
 	}
 
 	if !exists && !s.settings.AutoCreate {
-		return nil, fmt.Errorf("sqs queue with name %s does not exist", settings.ExchangeId)
+		return nil, fmt.Errorf("sqs queue with name %s does not exist", settings.Exchange.Name)
 	}
 
 	props, err := s.doCreateExchange(ctx, rabbitMqInput)
@@ -179,11 +186,14 @@ func (s service) CreateExchange(ctx context.Context, settings Settings) (*Proper
 }
 
 func (s service) CreateBinding(ctx context.Context, settings Settings) (*Properties, error) {
+	attributes := make(map[string]any)
+	attributes["x-message-deduplication"] = settings.MessageDeduplication
+
 	if len(settings.RoutingKeys) == 0 {
 		if err := s.client.BindQueue(ctx, QueueBindInput{
-			QueueName:    settings.QueueId,
-			RoutingKey:   "",
-			ExchangeName: settings.ExchangeId,
+			Attributes:   attributes,
+			QueueName:    settings.Queue.Name,
+			ExchangeName: settings.Exchange.Name,
 		}); err != nil {
 			return nil, fmt.Errorf("could not bind queue: %w", err)
 		}
@@ -193,9 +203,10 @@ func (s service) CreateBinding(ctx context.Context, settings Settings) (*Propert
 
 	for _, key := range settings.RoutingKeys {
 		if err := s.client.BindQueue(ctx, QueueBindInput{
-			QueueName:    settings.QueueId,
+			Attributes:   attributes,
+			QueueName:    settings.Queue.Name,
 			RoutingKey:   key,
-			ExchangeName: settings.ExchangeId,
+			ExchangeName: settings.Exchange.Name,
 		}); err != nil {
 			return nil, fmt.Errorf("could not bind queue: %w", err)
 		}

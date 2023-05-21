@@ -8,6 +8,9 @@ test:
   components:
     rabbitmq:
       default:
+        use_external_container: true
+        host: 127.0.0.1
+        port: 5672
 
 rabbitmq:
   default:

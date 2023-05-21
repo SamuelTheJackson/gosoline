@@ -46,20 +46,19 @@ type Client interface {
 }
 
 type client struct {
-	queueName        string
-	logger           log.Logger
-	Config           ClientConfig
-	loadOptions      LoadOptions
-	cConnection      *amqp.Connection
-	pConnection      *amqp.Connection
-	cChannel         *amqp.Channel
-	pChannel         *amqp.Channel
-	channelsPerQueue map[string]*amqp.Channel
-	done             chan bool
-	pNotifyClose     chan *amqp.Error
-	cNotifyClose     chan *amqp.Error
-	name             string
-	uuid             uuid.Uuid
+	queueName    string
+	logger       log.Logger
+	Config       ClientConfig
+	loadOptions  LoadOptions
+	cConnection  *amqp.Connection
+	pConnection  *amqp.Connection
+	cChannel     *amqp.Channel
+	pChannel     *amqp.Channel
+	done         chan bool
+	pNotifyClose chan *amqp.Error
+	cNotifyClose chan *amqp.Error
+	name         string
+	uuid         uuid.Uuid
 }
 
 func ProvideClient(ctx context.Context, config cfg.Config, logger log.Logger, clientName string, optFns ...ClientOption) (Client, error) {
@@ -85,12 +84,11 @@ func NewClient(ctx context.Context, config cfg.Config, logger log.Logger, name s
 	}
 
 	client := &client{
-		logger:           logger.WithChannel(fmt.Sprintf("rabbitmq-client-%s", name)),
-		Config:           *clientCfg,
-		loadOptions:      *loadOptions,
-		name:             name,
-		uuid:             uuid.New(),
-		channelsPerQueue: make(map[string]*amqp.Channel),
+		logger:      logger.WithChannel(fmt.Sprintf("rabbitmq-client-%s", name)),
+		Config:      *clientCfg,
+		loadOptions: *loadOptions,
+		name:        name,
+		uuid:        uuid.New(),
 	}
 
 	if err := client.createConnections(clientCfg.Settings.Endpoint); err != nil {

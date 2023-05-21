@@ -16,12 +16,13 @@ var _ AcknowledgeableInput = &rabbitmqInput{}
 
 type RabbitmqInputSettings struct {
 	cfg.AppId
-	ExchangeId   string                    `cfg:"exchange_id"`
-	QueueId      string                    `cfg:"queue_id"`
-	Exchange     rabbitmq.ExchangeSettings `cfg:"exchange"`
-	RunnerCount  int                       `cfg:"runner_count"`
-	ClientName   string                    `cfg:"client_name"`
-	Unmarshaller string                    `cfg:"unmarshaller" default:"msg"`
+	ExchangeId                  string                    `cfg:"exchange_id"`
+	QueueId                     string                    `cfg:"queue_id"`
+	Exchange                    rabbitmq.ExchangeSettings `cfg:"exchange"`
+	RunnerCount                 int                       `cfg:"runner_count"`
+	ClientName                  string                    `cfg:"client_name"`
+	MessageIdBasedDeduplication bool                      `cfg:"message_id_based_deduplication" default:"false"`
+	Unmarshaller                string                    `cfg:"unmarshaller" default:"msg"`
 }
 
 func (s RabbitmqInputSettings) GetAppId() cfg.AppId {
@@ -66,7 +67,7 @@ func NewRabbitmqInput(ctx context.Context, config cfg.Config, logger log.Logger,
 		return nil, fmt.Errorf("can not get rabbitmq queue name: %w", err)
 	}
 
-	exchangeSettings, err := rabbitmq.GetExchangeName(config, settings)
+	exchangeSettings, err := rabbitmq.GetExchangeSettings(config, settings)
 	if err != nil {
 		return nil, fmt.Errorf("can not get rabbitmq exchange name: %w", err)
 	}
@@ -151,8 +152,9 @@ func (i *rabbitmqInput) runLoop(ctx context.Context) error {
 			msg.Attributes = make(map[string]interface{})
 		}
 
-		msg.Attributes[AttributeRabbitmqDeliveryTag] = rabbitmqMessage.DeliveryTag
-		msg.Attributes[AttributeRabbitmqMessageId] = rabbitmqMessage.MessageDeduplicationId
+		msg.Attributes[rabbitmq.AttributeRabbitmqDeliveryTag] = rabbitmqMessage.DeliveryTag
+		msg.Attributes[rabbitmq.AttributeDeduplication] = rabbitmqMessage.DeduplicationId
+		msg.Attributes[rabbitmq.AttributeMessageId] = rabbitmqMessage.MessageId
 
 		i.channel <- msg
 	}
@@ -165,9 +167,9 @@ func (i *rabbitmqInput) Stop() {
 }
 
 func (i *rabbitmqInput) Ack(ctx context.Context, msg *Message, ack bool) error {
-	messageTagI, ok := msg.Attributes[AttributeRabbitmqDeliveryTag]
+	messageTagI, ok := msg.Attributes[rabbitmq.AttributeRabbitmqDeliveryTag]
 	if !ok {
-		return fmt.Errorf("the message has no attribute %s", AttributeRabbitmqDeliveryTag)
+		return fmt.Errorf("the message has no attribute %s", rabbitmq.AttributeRabbitmqDeliveryTag)
 	}
 
 	messageTag, ok := messageTagI.(uint64)
@@ -193,9 +195,9 @@ func (i *rabbitmqInput) AckBatch(ctx context.Context, msgs []*Message, acks []bo
 			ack = acks[i]
 		)
 
-		messageTagI, ok := msg.Attributes[AttributeRabbitmqDeliveryTag]
+		messageTagI, ok := msg.Attributes[rabbitmq.AttributeRabbitmqDeliveryTag]
 		if !ok {
-			multiError = multierror.Append(multiError, fmt.Errorf("the message has no attribute %s", AttributeRabbitmqDeliveryTag))
+			multiError = multierror.Append(multiError, fmt.Errorf("the message has no attribute %s", rabbitmq.AttributeRabbitmqDeliveryTag))
 
 			continue
 		}
