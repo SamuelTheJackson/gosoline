@@ -58,7 +58,12 @@ type ExchangeSettings struct {
 }
 
 type QueueSettings struct {
-	Name string
+	Name        string   `cfg:"name"`
+	AutoDelete  bool     `cfg:"auto_delete" default:"false"`
+	Durable     bool     `cfg:"durable" default:"false"`
+	Exclusive   bool     `cfg:"exclusive" default:"false"`
+	NoWait      bool     `cfg:"no_wait" default:"false"`
+	RoutingKeys []string `cfg:"routing_keys"`
 }
 
 type Settings struct {

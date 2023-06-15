@@ -34,12 +34,13 @@ type SendMessageBatchInput struct{}
 type SendMessageBatchOutput struct{}
 
 type ReceiveMessageInput struct {
-	Attributes map[string]any
-	AutoAck    bool
-	Exclusive  bool
-	NoLocal    bool
-	NoWait     bool
-	QueueName  string
+	Attributes   map[string]any
+	AutoAck      bool
+	Exclusive    bool
+	NoLocal      bool
+	NoWait       bool
+	ConsumerName string
+	QueueName    string
 }
 type ReceiveMessageOutput struct {
 	DeliverChannel <-chan amqp.Delivery

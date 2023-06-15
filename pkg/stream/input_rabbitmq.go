@@ -18,6 +18,7 @@ type RabbitmqInputSettings struct {
 	cfg.AppId
 	ExchangeId                  string                    `cfg:"exchange_id"`
 	QueueId                     string                    `cfg:"queue_id"`
+	Queue                       rabbitmq.QueueSettings    `cfg:"queue"`
 	Exchange                    rabbitmq.ExchangeSettings `cfg:"exchange"`
 	RunnerCount                 int                       `cfg:"runner_count"`
 	ClientName                  string                    `cfg:"client_name"`
@@ -62,15 +63,20 @@ func NewRabbitmqInput(ctx context.Context, config cfg.Config, logger log.Logger,
 	var err error
 	var unmarshaller UnmarshallerFunc
 
-	queueSettings, err := rabbitmq.GetQueueSettings(config, settings)
-	if err != nil {
-		return nil, fmt.Errorf("can not get rabbitmq queue name: %w", err)
-	}
-
 	exchangeSettings, err := rabbitmq.GetExchangeSettings(config, settings)
 	if err != nil {
 		return nil, fmt.Errorf("can not get rabbitmq exchange name: %w", err)
 	}
+	exchangeSettings.Type = settings.Exchange.Type
+
+	queueSettings, err := rabbitmq.GetQueueSettings(config, settings)
+	if err != nil {
+		return nil, fmt.Errorf("can not get rabbitmq queue name: %w", err)
+	}
+	queueSettings.RoutingKeys = settings.Queue.RoutingKeys
+	queueSettings.NoWait = settings.Queue.NoWait
+	queueSettings.Exclusive = settings.Queue.Exclusive
+	queueSettings.AutoDelete = settings.Queue.AutoDelete
 
 	queue, err := rabbitmq.ProvideQueue(ctx, config, logger, &rabbitmq.Settings{
 		Queue:      *queueSettings,

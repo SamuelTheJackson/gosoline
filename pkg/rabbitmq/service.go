@@ -68,6 +68,11 @@ func (s service) CreateQueue(ctx context.Context, settings Settings) (*Propertie
 
 	rabbitMqInput := CreateQueueInput{
 		Attributes: attributes,
+		AutoDelete: settings.Queue.AutoDelete,
+		Durable:    settings.Queue.Durable,
+		Exclusive:  settings.Queue.Exclusive,
+		NoWait:     settings.Queue.NoWait,
+		QueueName:  settings.Queue.Name,
 	}
 	exists, err := s.QueueExists(ctx, rabbitMqInput)
 	if err != nil {
@@ -189,7 +194,7 @@ func (s service) CreateBinding(ctx context.Context, settings Settings) (*Propert
 	attributes := make(map[string]any)
 	attributes["x-message-deduplication"] = settings.MessageDeduplication
 
-	if len(settings.RoutingKeys) == 0 {
+	if len(settings.Queue.RoutingKeys) == 0 {
 		if err := s.client.BindQueue(ctx, QueueBindInput{
 			Attributes:   attributes,
 			QueueName:    settings.Queue.Name,
@@ -201,7 +206,7 @@ func (s service) CreateBinding(ctx context.Context, settings Settings) (*Propert
 		return &Properties{}, nil
 	}
 
-	for _, key := range settings.RoutingKeys {
+	for _, key := range settings.Queue.RoutingKeys {
 		if err := s.client.BindQueue(ctx, QueueBindInput{
 			Attributes:   attributes,
 			QueueName:    settings.Queue.Name,
@@ -216,7 +221,9 @@ func (s service) CreateBinding(ctx context.Context, settings Settings) (*Propert
 }
 
 func (s service) GetPropertiesByName(ctx context.Context, name string) (*Properties, error) {
-	properties := &Properties{}
+	properties := &Properties{
+		QueueName: name,
+	}
 
 	return properties, nil
 }

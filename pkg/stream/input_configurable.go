@@ -294,11 +294,13 @@ type rabbitmqInputConfiguration struct {
 	Family            string                    `cfg:"target_family"`
 	Application       string                    `cfg:"target_application"`
 	ExchangeId        string                    `cfg:"target_exchange_id" validate:"min=1"`
+	QueueId           string                    `cfg:"queue_id" validate:"min=1"`
 	VisibilityTimeout int                       `cfg:"visibility_timeout" default:"30" validate:"min=1"`
 	RunnerCount       int                       `cfg:"runner_count" default:"1" validate:"min=1"`
 	ClientName        string                    `cfg:"client_name" default:"default"`
 	Unmarshaller      string                    `cfg:"unmarshaller" default:"msg"`
 	Exchange          rabbitmq.ExchangeSettings `cfg:"exchange"`
+	Queue             rabbitmq.QueueSettings    `cfg:"queue"`
 }
 
 func readRabbitmqInputSettings(config cfg.Config, name string) *RabbitmqInputSettings {
@@ -313,10 +315,12 @@ func readRabbitmqInputSettings(config cfg.Config, name string) *RabbitmqInputSet
 			Application: configuration.Application,
 		},
 		ExchangeId:   configuration.ExchangeId,
+		QueueId:      configuration.QueueId,
 		Exchange:     configuration.Exchange,
 		RunnerCount:  configuration.RunnerCount,
 		ClientName:   configuration.ClientName,
 		Unmarshaller: configuration.Unmarshaller,
+		Queue:        configuration.Queue,
 	}
 
 	settings.PadFromConfig(config)
